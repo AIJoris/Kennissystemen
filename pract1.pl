@@ -101,16 +101,40 @@ has_relation(X, natural_habitat, Y):-
 
 % Number of legs
 has_relation(X, nr_legs, Y) :-
-	X = animal, Y = 0/4;
-	X = mammal, Y = 2/4;
+	X = animal, Y = 0/inf;
+	X = mammal, Y = 2/inf;
 	X = bird, Y = 2;
 	X = primate, Y = 2;
 	X = bear, Y = 4;
 	X = turtle, Y = 4;
 	X = snake, Y = 0.
+
+%%%%%%%%%% Knowledge base rules %%%%%%%%%%
+relations(Concept, Attribute, Value):-
+	has_relation(Concept, Attribute, Value);
+	is_a1(Concept, Subsumer),
+	relations(Subsumer, Attribute, Value).
+
+% find_all_ancestors
+all_subsumers(Concept, Subsumers) :-
+	bagof(X, is_a1(Concept, X), Subsumers).
+
+all_subsumees(Concept, Subsumees) :-
+	bagof(X, is_a1(X, Concept), Subsumees).
+
+is_a1(Concept, Subsumer):-
+	is_a(Concept, Subsumer).
+
+is_a1(X, Z) :-
+	is_a(X, Y),
+	is_a1(Y, Z).
+
+classify(Newconcept, [[Concept|[Value]]|Attributes]) :-
 	
 
-%%%%%%%%%%% INFERENCE MODEL %%%%%%%%%%
+
+
+%%%%%%%%%%% Pretty print procedure %%%%%%%%%%
 show(X):-
 	write(X), write(' attributes: '),
 	show(X, _, _).
@@ -148,9 +172,6 @@ addConceptBetween(Concept, Subclass, Superclass):-
 addRelation(Concept, Attribute, Value):-
 	concept(Concept),
 	assert(has_relation(Concept, Attribute, Value)).
-
-classify(Concept, Attributes):-
-	not(concept(Concept)).
 
 
 %% Add fully new concept plant
