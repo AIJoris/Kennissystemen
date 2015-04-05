@@ -11,10 +11,11 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%%%%%%%% KNOWLEDGE BASE %%%%%%%%%%%
-%%%%% Hierarchic concepts %%%%%
 :- dynamic concept/1.
 :- dynamic has_relation/3.
 :- dynamic is_a/2.
+
+%%%%% Hierarchic concepts %%%%%
 concept(thing).
 
 concept(animal).
@@ -110,36 +111,32 @@ has_relation(X, nr_legs, Y) :-
 	X = snake, Y = 0.
 
 %%%%%%%%%% Knowledge base rules %%%%%%%%%%
+%% Display all information about relations, also using the inheritance tree
 relations(Concept, Attribute, Value):-
 	has_relation(Concept, Attribute, Value);
 	is_a1(Concept, Subsumer),
 	relations(Subsumer, Attribute, Value).
 
-% find_all_ancestors
+%% Find all subsumers of a concept
 all_subsumers(Concept, Subsumers) :-
 	bagof(X, is_a1(Concept, X), Subsumers).
 
+%% Find all subsumees of a concept
 all_subsumees(Concept, Subsumees) :-
 	bagof(X, is_a1(X, Concept), Subsumees).
 
+%% These rules make use of the transitivity of the inheritance tree
 is_a1(Concept, Subsumer):-
 	is_a(Concept, Subsumer).
-
 is_a1(X, Z) :-
 	is_a(X, Y),
 	is_a1(Y, Z).
 
-classify(Newconcept, [[Concept|[Value]]|Attributes]) :-
-	
-
-
-
 %%%%%%%%%%% Pretty print procedure %%%%%%%%%%
+%% Show information about a concept X
 show(X):-
 	write(X), write(' attributes: '),
 	show(X, _, _).
-
-
 show(Concept, Attribute, Value):-
 	findall([Attribute | Value], has_relation(Concept, Attribute, Value), Bag),
 	write(Bag),nl,
@@ -147,33 +144,40 @@ show(Concept, Attribute, Value):-
 	is_a(Concept, Subsumer),
 	show(Subsumer).
 
+%% Show the contents of the entire knowledge base
 show:-
 	concept(X), nl,
 	show(X).
 show.
 
 %%%%%%%%%% Alter database %%%%%%%%%%
+%% Add fully new concept, which falls under 'thing' only
 addConcept(Concept):-
 	addConceptBelow(Concept, thing).
 
-
+%% Add a concept with an is_a relation (Concept is_a Superclass).
 addConceptBelow(Concept, Superclass):-
 	not(concept(Concept)),
 	assert(concept(Concept)),
 	concept(Superclass),
 	assert(is_a(Concept, Superclass)).
 
+%% Add a concept between two other concepts, so this new concept has 
+%% all the attributes from its superclass, and the subsumee inherits all 
+%% information from the newly added concept
 addConceptBetween(Concept, Subclass, Superclass):-
 	retract(is_a(Subclass, Superclass)),
 	retract(concept(Subclass)),
 	addConceptBelow(Concept, Superclass),
 	addConceptBelow(Subclass, Concept).
 
+%% Add a relation to a concept
 addRelation(Concept, Attribute, Value):-
 	concept(Concept),
 	assert(has_relation(Concept, Attribute, Value)).
 
 
+%%%%%%%%%% FIVE SHORTCUTS %%%%%%%%%%
 %% Add fully new concept plant
 go1:-
 	addConcept(plant).
@@ -186,5 +190,5 @@ go3:-
 	addConceptBetween(venomous_snake, rattlesnake, snake),
 	addRelation(venomous_snake, poison, deadly).
 
-%% go4:-
+
 
