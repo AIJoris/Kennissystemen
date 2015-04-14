@@ -124,6 +124,7 @@ diagnose:-
 	write('You are suffering from '), write(Diseases),!;
 	ask_questions.
 
+%% Hier moet nog daadwerkelijk shit gebeuren, dit is meer dummy
 ask_questions:-
 	write_ln('Do you alsof suffer from headache?'),
 	write_ln('thats good'),
