@@ -9,6 +9,12 @@
 %% 	Joris Baan
 %% 	Studentennummer: 10576681
 %% 	Email: jsbaan@gmail.com
+%% 
+%% 
+%% - Mag je vereisen dat de user alles in vaste termen beschrijft bv 38.5_degrees_fever
+%% - Moet je een correlatie mechanisme inbouwen (symptomen matchen met ziekten en doorvragen over de hoogste match)
+%% - 
+%% 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 /* --- Defining operators --- */
@@ -20,9 +26,8 @@
 
 
 /* --- A simple backward chaining rule interpreter --- */
-
 is_true( P ):-
-    symptom( P ).
+    has_symptom( P ).
 
 is_true( P ):-
     if Condition then P,
@@ -39,23 +44,22 @@ is_true( P1 or P2 ):-
 
 
 /* --- A simple forward chaining rule interpreter --- */
-
 forward:-
     new_derived_fact( P ),
     !,
     write( 'Derived:' ), write_ln( P ),
-    assert( fact( P )),
+    assert( has_disease( P )),
     forward
     ;
     write_ln( 'No more facts' ).
 
 new_derived_fact( Conclusion ):-
     if Condition then Conclusion,
-    not( fact( Conclusion ) ),
+    not( has_symptom( Conclusion ) ),
     composed_fact( Condition ).
 
 composed_fact( Condition ):-
-    fact( Condition ).
+    has_symptom( Condition ).
 
 composed_fact( Condition1 and Condition2 ):-
     composed_fact( Condition1 ),
@@ -76,13 +80,16 @@ symptom(shivers).
 symptom(headache).
 symptom(diarrhea).
 symptom(barf).
+disease(malaria).
+disease(sick).
+disease(arse_worm).
 
 %% Main function
 go:-
 	take_input(y, Symptoms),
-	write(Symptoms),
 	assert_symptoms(Symptoms),
-	diagnose(Symptoms, Disease).
+	diagnose(Disease),
+	write('You are suffering from '), write(Disease),!.
 
 
 %% Take input from the user
@@ -100,16 +107,17 @@ assert_symptoms([Symptom|Symptoms]):-
 	assert(has_symptom(Symptom)),
 	assert_symptoms(Symptoms).
 
-diagnose(Symptoms, Disease):-
-	
+%% Check if the given symptoms match a disease exactly
+diagnose(Disease):-
+	forward.
+
 
 /* --- Knowledge system --- */
 
 if high_fever and transpiration then malaria.
 if worm_out_arse then arse_worm.
-if transpiration and nausiated then sick.
-has_disease(A, B):-
-	if A then B.
+if transpiration and nausiated and worm_out_arse and barf then sick.
+
 
 
 
