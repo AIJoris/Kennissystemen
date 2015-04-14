@@ -22,6 +22,7 @@
 :- op(700, xfx, then).
 :- op(300, xfy, or).
 :- op(200, xfy, and).
+:- dynamic has_symptom/1.
 
 
 /* --- A simple backward chaining rule interpreter --- */
@@ -42,6 +43,21 @@ is_true( P1 or P2 ):-
     ;
     is_true( P2 ).
 
+/* --- A simple backward chaining rule interpreter MODIFIED--- */
+is_plausible( P ):-
+    has_symptom( P ).
+
+is_plausible( P ):-
+    if Condition then P,
+    is_plausible( Condition ).
+
+is_plausible( P1 and P2 ):-
+    is_plausible( P1 or P2 ).
+
+is_plausible( P1 or P2 ):-
+    is_plausible( P1 )
+    ;
+    is_plausible( P2 ).
 
 /* --- A simple forward chaining rule interpreter --- */
 
@@ -89,6 +105,10 @@ disease(malaria).
 disease(sick).
 disease(arse_worm).
 
+extract_symptom(S1 and S2, Z):-
+    not(has_symptom(S1)), Z = S2;
+    extract_symptom(S2), Z = S1.
+
 %% Main function
 go:-
 	display_options,
@@ -126,12 +146,27 @@ diagnose:-
 
 %% Hier moet nog daadwerkelijk shit gebeuren, dit is meer dummy
 ask_questions:-
-	write_ln('Do you alsof suffer from headache?'),
-	write_ln('thats good'),
-	assert(has_disease(fever)),
+    disease(PlausibleDisease),
+    is_plausible(PlausibleDisease),
+    if PlausibleSymptoms then PlausibleDisease,
+    write_ln(PlausibleDisease),
+    write_ln(PlausibleSymptoms),
+    extract_symptom(PlausibleSymptoms, Z),
+	write('Do you alsof suffer from '), write(Z), write('? (y/n)'),nl,
+    %% read(Answer),
+    %% add_symptom(Answer, Z):-
+	%% write_ln('thats good'),
+	%% assert(has_disease(fever)),
 	diagnose.
 
 /* --- Knowledge system --- */
+
+add_symptom(n, _):-
+    write_ln('Noted.').
+    % Hier miss de hele symptom uit de database verwijderen?
+
+add_symptom(y, Symptom):-
+    assert(has_symptom(Symptom)).
 
 if high_fever and transpiration then malaria.
 if worm_out_arse then arse_worm.
