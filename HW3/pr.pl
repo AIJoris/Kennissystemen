@@ -18,7 +18,6 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 /* --- Defining operators --- */
-
 :- op(800, fx, if).
 :- op(700, xfx, then).
 :- op(300, xfy, or).
@@ -26,6 +25,7 @@
 
 
 /* --- A simple backward chaining rule interpreter --- */
+
 is_true( P ):-
     has_symptom( P ).
 
@@ -44,18 +44,23 @@ is_true( P1 or P2 ):-
 
 
 /* --- A simple forward chaining rule interpreter --- */
+
 forward:-
     new_derived_fact( P ),
     !,
-    write( 'Derived:' ), write_ln( P ),
-    assert( has_disease( P )),
+    %% write( 'Derived:' ), write_ln( P ),
+    disease(P),
+    not(has_disease(P)),
+    assert(has_disease(P)),
     forward
     ;
-    write_ln( 'No more facts' ).
+    write_ln( '' ).
 
 new_derived_fact( Conclusion ):-
     if Condition then Conclusion,
-    not( has_symptom( Conclusion ) ),
+    assert(has_disease(dummy)),
+    not( has_disease( Conclusion )),
+    retract(has_disease(dummy)),
     composed_fact( Condition ).
 
 composed_fact( Condition ):-
@@ -86,10 +91,14 @@ disease(arse_worm).
 
 %% Main function
 go:-
+	display_options,
 	take_input(y, Symptoms),
 	assert_symptoms(Symptoms),
-	diagnose(Disease),
-	write('You are suffering from '), write(Disease),!.
+	diagnose.
+
+display_options:-
+	bagof(Symptom, symptom(Symptom), Symptoms),
+	write('You can choose from the following list of symptoms: '), write(Symptoms),nl.
 
 
 %% Take input from the user
@@ -108,9 +117,18 @@ assert_symptoms([Symptom|Symptoms]):-
 	assert_symptoms(Symptoms).
 
 %% Check if the given symptoms match a disease exactly
-diagnose(Disease):-
-	forward.
+diagnose:-
+	forward,
+	bagof(Disease, has_disease(Disease), Diseases),
+	Diseases = [_],
+	write('You are suffering from '), write(Diseases),!;
+	ask_questions.
 
+ask_questions:-
+	write_ln('Do you alsof suffer from headache?'),
+	write_ln('thats good'),
+	assert(has_disease(fever)),
+	diagnose.
 
 /* --- Knowledge system --- */
 
