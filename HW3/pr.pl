@@ -65,10 +65,12 @@ is_plausible( P1 or P2 ):-
 
 forward:-
     new_derived_fact( P ),
-    !,
+    %% Dit uitroepteken moest weg (weet niet waarom hij der stond)
     %% write( 'Derived:' ), write_ln( P ),
     disease(P),
     not(has_disease(P)),
+    gtrace,
+    not(descends_from(_,P)),
     assert(has_disease(P)),
     forward
     ;
@@ -235,7 +237,7 @@ ask_questions:-
     if PlausibleSymptoms then PlausibleDisease,
     extract_symptom(PlausibleSymptoms, Z),
     not(not_has_disease_Inh(PlausibleDisease)),
-    write('Do you alsof suffer from '), write(Z), write('? (y/n)'),nl,
+    write('Do you also suffer from '), write(Z), write('? (y/n)'),nl,
     read(Answer),
     add_symptom(Answer, Z, PlausibleDisease),
     diagnose.
