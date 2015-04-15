@@ -23,6 +23,7 @@
 :- op(300, xfy, or).
 :- op(200, xfy, and).
 :- dynamic has_symptom/1.
+:- dynamic symptom/1.
 
 
 /* --- A simple backward chaining rule interpreter --- */
@@ -105,9 +106,15 @@ disease(malaria).
 disease(sick).
 disease(arse_worm).
 
+
 extract_symptom(S1 and S2, Z):-
-    not(has_symptom(S1)), Z = S2;
-    extract_symptom(S2), Z = S1.
+    extract_symptom(S1, Z);
+    extract_symptom(S2, Z).
+
+extract_symptom(S1, Z):-
+    assert(not_has_disease(dummy)),
+    retract(not_has_disease(dummy)),
+    not(has_symptom(S1)), not(not_has_symptom(S1)), Z = S1.
 
 %% Main function
 go:-
@@ -149,20 +156,19 @@ ask_questions:-
     disease(PlausibleDisease),
     is_plausible(PlausibleDisease),
     if PlausibleSymptoms then PlausibleDisease,
-    write_ln(PlausibleDisease),
-    write_ln(PlausibleSymptoms),
     extract_symptom(PlausibleSymptoms, Z),
 	write('Do you alsof suffer from '), write(Z), write('? (y/n)'),nl,
-    %% read(Answer),
-    %% add_symptom(Answer, Z):-
+    read(Answer),
+    add_symptom(Answer, Z),
 	%% write_ln('thats good'),
 	%% assert(has_disease(fever)),
 	diagnose.
 
 /* --- Knowledge system --- */
 
-add_symptom(n, _):-
-    write_ln('Noted.').
+add_symptom(n, Symptom):-
+    write_ln('Noted.'),
+    assert(not_has_symptom(Symptom)).
     % Hier miss de hele symptom uit de database verwijderen?
 
 add_symptom(y, Symptom):-
