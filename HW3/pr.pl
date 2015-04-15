@@ -11,8 +11,8 @@
 %% 	Email: jsbaan@gmail.com
 %% 
 %% 
-%% - Mag je vereisen dat de user alles in vaste termen beschrijft bv 38.5_degrees_fever
-%% - Moet je een correlatie mechanisme inbouwen (symptomen matchen met ziekten en doorvragen over de hoogste match)
+%% - Hierarchy within diseases (zoekruimte beperken)
+%% - Abstraction of symptoms
 %% - 
 %% 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -24,7 +24,7 @@
 :- op(200, xfy, and).
 :- dynamic has_symptom/1.
 :- dynamic symptom/1.
-
+:- dynamic not_has_symptom/1.
 
 /* --- A simple backward chaining rule interpreter --- */
 
@@ -71,6 +71,7 @@ forward:-
     assert(has_disease(P)),
     forward
     ;
+    retract(has_disease(dummy));
     write_ln( '' ).
 
 new_derived_fact( Conclusion ):-
@@ -105,16 +106,18 @@ symptom(barf).
 disease(malaria).
 disease(sick).
 disease(arse_worm).
-
+not_has_symptom(dummy).
 
 extract_symptom(S1 and S2, Z):-
     extract_symptom(S1, Z);
     extract_symptom(S2, Z).
 
 extract_symptom(S1, Z):-
-    assert(not_has_disease(dummy)),
-    retract(not_has_disease(dummy)),
-    not(has_symptom(S1)), not(not_has_symptom(S1)), Z = S1.
+    not(has_symptom(S1)),
+    not(not_has_symptom(S1)),
+    not(S1 = _ and _),
+    Z = S1.
+
 
 %% Main function
 go:-
@@ -129,13 +132,13 @@ display_options:-
 
 
 %% Take input from the user
-take_input(n, []).
-take_input(y, [X|Symptoms]):-
-	write('Please enter your symptom'),nl,
-	read(X),
-	write('Do you want to name another symptom? (y/n)'), nl,
-	read(Y),
-	take_input(Y, Symptoms).
+%% take_input(n, []).
+take_input(y, Symptoms):-
+	write_ln('Please enter your symptoms comma-seperated within square brackets:'),
+	read(Symptoms).
+	%% write('Do you want to name another symptom? (y/n)'), nl,
+	%% read(Y),
+	%% take_input(Y, Symptoms).
 
 %% Assert symptoms the user suffers from to the database
 assert_symptoms([]).
@@ -147,7 +150,7 @@ assert_symptoms([Symptom|Symptoms]):-
 diagnose:-
 	forward,
 	bagof(Disease, has_disease(Disease), Diseases),
-	Diseases = [_],
+	Diseases = [_|_],
 	write('You are suffering from '), write(Diseases),!;
 	ask_questions.
 
@@ -174,8 +177,8 @@ add_symptom(n, Symptom):-
 add_symptom(y, Symptom):-
     assert(has_symptom(Symptom)).
 
-if high_fever and transpiration then malaria.
-if worm_out_arse then arse_worm.
+if fever and transpiration then malaria.
+if worm_out_arse and ass_scratch then arse_worm.
 if transpiration and nausiated and worm_out_arse and barf then sick.
 
 
