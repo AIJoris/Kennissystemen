@@ -10,11 +10,6 @@
 %%  Studentennummer: 10576681
 %%  Email: jsbaan@gmail.com
 %% 
-%% 
-%% - Hierarchy within diseases (zoekruimte beperken)
-%% - Abstraction of symptoms
-%% - 
-%% 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 /* --- Defining operators --- */
@@ -22,32 +17,35 @@
 :- op(700, xfx, then).
 :- op(300, xfy, or).
 :- op(200, xfy, and).
+:- op(800, xfx, <=).
+
 %% :- dynamic has_symptom/1.
 :- dynamic symptom/1.
 :- dynamic not_has_symptom/1.
 :- dynamic not_has_disease/1.
 
-/* --- A simple backward chaining rule interpreter --- */
+/* --- A simple backward chaining rule interpreter altered to return --- */
+/* --- the how-explanation. (Brakto chapter 15)                      --- */
+is_true(P, P ):-
+    has_symptom(P).
 
-is_true( P ):-
-    has_symptom( P ).
+is_true(P, P <= CondProof):-
+    if Cond then P,
+    is_true(Cond, CondProof).
 
-is_true( P ):-
-    if Condition then P,
-    is_true( Condition ).
+is_true(P1 and P2, Proof1 and Proof2):-
+    is_true(P1, Proof1),
+    is_true(P2, Proof2).
 
-is_true( P1 and P2 ):-
-    is_true( P1 ),
-    is_true( P2 ).
-
-is_true( P1 or P2 ):-
-    is_true( P1 )
+is_true(P1 or P2, Proof):-
+    is_true(P1, Proof)
     ;
-    is_true( P2 ).
+    is_true(P2, Proof).
 
 /* --- A simple backward chaining rule interpreter MODIFIED--- */
 is_plausible( P ):-
-    has_symptom( P ).
+    has_symptom_Inh(P, _ );
+    has_symptom_Inh(_,P).
 
 is_plausible( P ):-
     if Condition then P,
@@ -69,7 +67,7 @@ forward:-
     %% write( 'Derived:' ), write_ln( P ),
     disease(P),
     not(has_disease(P)),
-    gtrace,
+    %% gtrace,
     not(descends_from(_,P)),
     assert(has_disease(P)),
     forward
@@ -111,16 +109,40 @@ symptom(fever).
         symptom(recurrent_fever_72).
 symptom(shivers).
 
-symptom(headache).
-symptom(diarrhea).
-symptom(barf).
+symptom(head_complaints).
+    symptom(yellowish_discoloration).
+    symptom(headache).
+    symptom(drowsy).
+
+symptom(stomach_complaints).
+    symptom(stomach_ache).
+    symptom(nausiated).
+
+symptom(excretion_complaints).
+    symptom(stool_complaints).
+        symptom(diarrhea).
+        symptom(sticky_diarrhea).
+        symptom(light_colored_stools).
+        symptom(worms_in_stool).
+            symptom(worms_in_stool_big).
+                symptom(worms_in_stool_3m).
+                symptom(worms_in_stool_10m).
+            symptom(worms_in_stool_1cm).
+            symptom(worms_in_stool_4cm).
+    symptom(dark_colored_urine).
+
+symptom(skin_complaints).
+    symptom(itchy_anus).
+    symptom(nodule).
+    symptom(stung_by_mosquito).
+
 
 %% Diseases
 disease(malaria).
+    disease(tropica_malaria).
     disease(benign_malaria).
         disease(tertiana_malaria).
         disease(quartana_malaria).
-    disease(tropica_malaria).
 
 disease(intestinal_infection).
     disease(tyfus).
@@ -138,8 +160,7 @@ disease(skin_disease).
     disease(lepra).
     disease(fungus).
         disease(panoe).
-disease(sick).
-disease(arse_worm).
+
 
 %% Diseases inheritances
 descends_from(benign_malaria, malaria).
@@ -167,6 +188,29 @@ descends_from(recurrent_fever, fever).
 descends_from(recurrent_fever_48, recurrent_fever).
 descends_from(recurrent_fever_72, recurrent_fever).
 
+descends_from(yellowish_discoloration, head_complaints).
+descends_from(headache, head_complaints).
+descends_from(drowsy, head_complaints).
+
+descends_from(stomach_ache, stomach_complaints).
+descends_from(nausiated, stomach_complaints).
+
+descends_from(dark_colored_urine, excretion_complaints).
+descends_from(stool_complaints, excretion_complaints).
+descends_from(diarrhea, stool_complaints).
+descends_from(sticky_diarrhea, stool_complaints).
+descends_from(light_colored_stools, stool_complaints).
+descends_from(worms_in_stool, stool_complaints).
+descends_from(worms_in_stool_4cm, worms_in_stool).
+descends_from(worms_in_stool_1cm, worms_in_stool).
+descends_from(worms_in_stool_big, worms_in_stool).
+descends_from(worms_in_stool_3m, worms_in_stool_big).
+descends_from(worms_in_stool_10m, worms_in_stool_big).
+
+related(X, Y):-
+    descends_from(X, Y);
+    descends_from(Y, X).
+
 not_has_symptom(dummy).
 not_has_disease(dummy).
 
@@ -180,6 +224,13 @@ extract_symptom(S1, Z):-
     not(not_has_symptom_Inh(S1)),
     not(S1 = _ and _),
     Z = S1.
+
+has_symptom_Inh(Symptom, _):-
+    has_symptom(Symptom).
+
+has_symptom_Inh(Symptom, ParentSymptom):-
+    descends_from(Symptom, Sub_symptom),
+    has_symptom_Inh(Sub_symptom, ParentSymptom).
 
 %% Also check whether the inheritances are not present (if you said: I do not
 %% suffer from fever you do not want to be asked if you have recurrent fever)
@@ -226,8 +277,9 @@ assert_symptoms([Symptom|Symptoms]):-
 diagnose:-
     forward,
     bagof(Disease, has_disease(Disease), Diseases),
-    Diseases = [_|_],
-    write('You are suffering from '), write(Diseases),!;
+    Diseases = [Disease|_],
+    is_true(Disease, HowExplanation),
+    write('You are suffering from '), write(Diseases),nl, write_ln(HowExplanation),!;
     ask_questions.
 
 %% Hier moet nog daadwerkelijk shit gebeuren, dit is meer dummy
@@ -243,7 +295,6 @@ ask_questions:-
     diagnose.
 
 /* --- Knowledge system --- */
-
 add_symptom(n, Symptom, Disease):-
     write_ln('Noted.'),
     assert(not_has_symptom(Symptom)),
@@ -252,15 +303,20 @@ add_symptom(n, Symptom, Disease):-
 add_symptom(y, Symptom, _):-
     assert(has_symptom(Symptom)).
 
-if fever and transpiration and shivers then malaria.
-if constant_fever and transpiration and shivers then tropica_malaria.
-if recurrent_fever and transpiration and shivers then benign_malaria.
-if recurrent_fever_48 and transpiration and shivers then tertiana_malaria.
-if recurrent_fever_72 and transpiration and shivers then quartana_malaria.
+if fever and transpiration and shivers and stung_by_mosquito then malaria.
+    if constant_fever and transpiration and shivers and stung_by_mosquito then tropica_malaria.
+    if recurrent_fever and transpiration and shivers and stung_by_mosquito then benign_malaria.
+        if recurrent_fever_48 and transpiration and shivers and stung_by_mosquito then tertiana_malaria.
+        if recurrent_fever_72 and transpiration and shivers and stung_by_mosquito then quartana_malaria.
 
-if worm_out_arse and ass_scratch then arse_worm.
-if transpiration and nausiated and worm_out_arse and barf then sick.
+if fever and headache and drowsy then tyfus.
+if sticky_diarrhea and stomach_ache and nausiated then giardiases.
+if yellowish_discoloration and dark_colored_urine and light_colored_stools and stomach_ache then jaundice.
 
-
-
+if worms_in_stool then worms.
+    if worms_in_stool_big then tape_worm.
+        if stomach_ache and worms_in_stool_10m then taenia_saginata.
+        if nodule and worms_in_stool_3m then taenia_solium.
+    if itchy_anus and nausiated and worms_in_stool_1cm then pin_worm.
+    if stomach_ache and diarrhea and worms_in_stool_4cm then whip_worm.
 
