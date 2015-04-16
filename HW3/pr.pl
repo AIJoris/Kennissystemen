@@ -246,7 +246,10 @@ go:-
     take_input(y, Symptoms),
     assert_symptoms(Symptoms),
     diagnose,!;
-    write_ln('It seems you are perfectly fine!').
+    write_ln('It seems you are perfectly fine!'),
+    bagof(X, not_has_disease(X), [_|Bag]),
+    write('You can be happy you dont suffer from: '), 
+    write_ln(Bag).
 
 display_options:-
     bagof(Symptom, symptom(Symptom), Symptoms),
@@ -271,7 +274,7 @@ diagnose:-
     Diseases = [Disease|_],
     is_true(Disease, HowExplanation),
     write('You are suffering from '), write(Diseases),write(' because: '),nl, write_ln(HowExplanation),!;
-    ask_questions.
+    ask_questions,!.
 
 %% Ask questions about more symptoms the user didn't mention
 ask_questions:-
@@ -286,7 +289,7 @@ ask_questions:-
     bagof(X, not_has_disease(X), [_|Bag]),
     write('You dont suffer from: '), 
     write_ln(Bag),
-    diagnose.
+    diagnose,!.
 
 
 %% This function returns a symptom the user might have based on 
