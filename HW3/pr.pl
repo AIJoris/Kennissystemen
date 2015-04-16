@@ -24,82 +24,7 @@
 :- dynamic not_has_symptom/1.
 :- dynamic not_has_disease/1.
 
-/* --- A simple backward chaining rule interpreter altered to return --- */
-/* --- the how-explanation. (Brakto chapter 15)                      --- */
-is_true(P, P ):-
-    has_symptom(P).
-
-is_true(P, P <= CondProof):-
-    if Cond then P,
-    is_true(Cond, CondProof).
-
-is_true(P1 and P2, Proof1 and Proof2):-
-    is_true(P1, Proof1),
-    is_true(P2, Proof2).
-
-is_true(P1 or P2, Proof):-
-    is_true(P1, Proof)
-    ;
-    is_true(P2, Proof).
-
-/* --- A simple backward chaining rule interpreter MODIFIED--- */
-is_plausible( P ):-
-    has_symptom_Inh(P, _ );
-    has_symptom_Inh(_,P).
-
-is_plausible( P ):-
-    if Condition then P,
-    is_plausible( Condition ).
-
-is_plausible( P1 and P2 ):-
-    is_plausible( P1 or P2 ).
-
-is_plausible( P1 or P2 ):-
-    is_plausible( P1 )
-    ;
-    is_plausible( P2 ).
-
-/* --- A simple forward chaining rule interpreter --- */
-
-forward:-
-    new_derived_fact( P ),
-    %% Dit uitroepteken moest weg (weet niet waarom hij der stond)
-    %% write( 'Derived:' ), write_ln( P ),
-    disease(P),
-    not(has_disease(P)),
-    %% gtrace,
-    not(descends_from(_,P)),
-    assert(has_disease(P)),
-    forward
-    ;
-    retract(has_disease(dummy));
-    write_ln( '' ).
-
-new_derived_fact( Conclusion ):-
-    if Condition then Conclusion,
-    assert(has_disease(dummy)),
-    not( has_disease( Conclusion )),
-    retract(has_disease(dummy)),
-    composed_fact( Condition ).
-
-composed_fact( Condition ):-
-    has_symptom( Condition ).
-
-composed_fact( Condition1 and Condition2 ):-
-    composed_fact( Condition1 ),
-    composed_fact( Condition2 ).
-
-composed_fact( Condition1 or Condition2 ):-
-    composed_fact( Condition1 )
-    ;
-    composed_fact( Condition2 ).
-
-if_then(Condition, Conclusion):-
-    if Condition then Conclusion;
-    descends_from(SubCondition, Condition),
-    if_then(SubCondition, Conclusion).
-
-/* --- User interaction model--- */
+/* --- The knowledge base ---*/
 %% Symptoms
 symptom(transpiration).
 symptom(fever).
@@ -207,102 +132,11 @@ descends_from(worms_in_stool_big, worms_in_stool).
 descends_from(worms_in_stool_3m, worms_in_stool_big).
 descends_from(worms_in_stool_10m, worms_in_stool_big).
 
-related(X, Y):-
-    descends_from(X, Y);
-    descends_from(Y, X).
-
 not_has_symptom(dummy).
 not_has_disease(dummy).
 
-extract_symptom(S1 and S2, Z):-
-    %% gtrace,
-    extract_symptom(S1, Z);
-    extract_symptom(S2, Z).
 
-extract_symptom(S1, Z):-
-    not(has_symptom(S1)),
-    not(not_has_symptom_Inh(S1)),
-    not(S1 = _ and _),
-    Z = S1.
-
-has_symptom_Inh(Symptom, _):-
-    has_symptom(Symptom).
-
-has_symptom_Inh(Symptom, ParentSymptom):-
-    descends_from(Symptom, Sub_symptom),
-    has_symptom_Inh(Sub_symptom, ParentSymptom).
-
-%% Also check whether the inheritances are not present (if you said: I do not
-%% suffer from fever you do not want to be asked if you have recurrent fever)
-not_has_symptom_Inh(Symptom):-
-    not_has_symptom(Symptom);
-    descends_from(Symptom, ParentSymptom),
-    not_has_symptom_Inh(ParentSymptom).
-
-%% Also check whether the inheritances are not present (if you said: I do not
-%% suffer from malaria (implicit) you dont want to be asked if you have recurrent fever)
-not_has_disease_Inh(Disease):-
-    not_has_disease(Disease);
-    descends_from(Disease, ParentDisease),
-    not_has_disease_Inh(ParentDisease).
-
-%% Main function
-go:-
-    display_options,
-    take_input(y, Symptoms),
-    assert_symptoms(Symptoms),
-    diagnose.
-
-display_options:-
-    bagof(Symptom, symptom(Symptom), Symptoms),
-    write('You can choose from the following list of symptoms: '), write(Symptoms),nl.
-
-
-%% Take input from the user
-%% take_input(n, []).
-take_input(y, Symptoms):-
-    write_ln('Please enter your symptoms comma-seperated within square brackets:'),
-    read(Symptoms).
-    %% write('Do you want to name another symptom? (y/n)'), nl,
-    %% read(Y),
-    %% take_input(Y, Symptoms).
-
-%% Assert symptoms the user suffers from to the database
-assert_symptoms([]).
-assert_symptoms([Symptom|Symptoms]):-
-    assert(has_symptom(Symptom)),
-    assert_symptoms(Symptoms).
-
-%% Check if the given symptoms match a disease exactly
-diagnose:-
-    forward,
-    bagof(Disease, has_disease(Disease), Diseases),
-    Diseases = [Disease|_],
-    is_true(Disease, HowExplanation),
-    write('You are suffering from '), write(Diseases),nl, write_ln(HowExplanation),!;
-    ask_questions.
-
-%% Hier moet nog daadwerkelijk shit gebeuren, dit is meer dummy
-ask_questions:-
-    disease(PlausibleDisease),
-    is_plausible(PlausibleDisease),
-    if PlausibleSymptoms then PlausibleDisease,
-    extract_symptom(PlausibleSymptoms, Z),
-    not(not_has_disease_Inh(PlausibleDisease)),
-    write('Do you also suffer from '), write(Z), write('? (y/n)'),nl,
-    read(Answer),
-    add_symptom(Answer, Z, PlausibleDisease),
-    diagnose.
-
-/* --- Knowledge system --- */
-add_symptom(n, Symptom, Disease):-
-    write_ln('Noted.'),
-    assert(not_has_symptom(Symptom)),
-    assert(not_has_disease(Disease)).
-
-add_symptom(y, Symptom, _):-
-    assert(has_symptom(Symptom)).
-
+%% The if/then rules declaring when you have which disease
 if fever and transpiration and shivers and stung_by_mosquito then malaria.
     if constant_fever and transpiration and shivers and stung_by_mosquito then tropica_malaria.
     if recurrent_fever and transpiration and shivers and stung_by_mosquito then benign_malaria.
@@ -319,4 +153,188 @@ if worms_in_stool then worms.
         if nodule and worms_in_stool_3m then taenia_solium.
     if itchy_anus and nausiated and worms_in_stool_1cm then pin_worm.
     if stomach_ache and diarrhea and worms_in_stool_4cm then whip_worm.
+
+
+
+
+
+
+/* --- A simple backward chaining rule interpreter altered to return
+        the how-explanation. (Brakto chapter 15) --- */
+is_true(P, P ):-
+    has_symptom(P).
+
+is_true(P, P <= CondProof):-
+    if Cond then P,
+    is_true(Cond, CondProof).
+
+is_true(P1 and P2, Proof1 and Proof2):-
+    is_true(P1, Proof1),
+    is_true(P2, Proof2).
+
+is_true(P1 or P2, Proof):-
+    is_true(P1, Proof)
+    ;
+    is_true(P2, Proof).
+
+/* --- A simple backward chaining rule interpreter that searches for
+        diseases the user might have based on the symptoms he/she named--- */
+is_plausible( P ):-
+    has_symptom_Inh(P, _ ).
+
+is_plausible( P ):-
+    if Condition then P,
+    is_plausible( Condition ).
+
+is_plausible( P1 and P2 ):-
+    is_plausible( P1 or P2 ).
+
+is_plausible( P1 or P2 ):-
+    is_plausible( P1 )
+    ;
+    is_plausible( P2 ).
+
+/* --- A simple forward chaining rule interpreter --- */
+
+forward:-
+    new_derived_fact( P ),
+    disease(P),
+    not(has_disease(P)),
+    %% gtrace,
+    not(descends_from(_,P)),
+    assert(has_disease(P)),
+    forward
+    ;
+    retract(has_disease(dummy));
+    write_ln( '' ).
+
+new_derived_fact( Conclusion ):-
+    if Condition then Conclusion,
+    assert(has_disease(dummy)),
+    not( has_disease( Conclusion )),
+    retract(has_disease(dummy)),
+    composed_fact( Condition ).
+
+composed_fact( Condition ):-
+    has_symptom( Condition ).
+
+composed_fact( Condition1 and Condition2 ):-
+    composed_fact( Condition1 ),
+    composed_fact( Condition2 ).
+
+composed_fact( Condition1 or Condition2 ):-
+    composed_fact( Condition1 )
+    ;
+    composed_fact( Condition2 ).
+
+if_then(Condition, Conclusion):-
+    if Condition then Conclusion;
+    descends_from(SubCondition, Condition),
+    if_then(SubCondition, Conclusion).
+
+
+
+
+
+
+
+/* --- User interaction model--- */
+% go is the main function, which first shows the user what symptom he can
+%% choose from, then takes the input and tries to diagnose the user
+go:-
+    display_options,
+    take_input(y, Symptoms),
+    assert_symptoms(Symptoms),
+    diagnose.
+
+display_options:-
+    bagof(Symptom, symptom(Symptom), Symptoms),
+    write('You can choose from the following list of symptoms: '), write(Symptoms),nl.
+
+
+%% Take input from the user
+take_input(y, Symptoms):-
+    write_ln('Please enter your symptoms comma-seperated within square brackets:'),
+    read(Symptoms).
+
+%% Assert symptoms the user suffers from to the database
+assert_symptoms([]).
+assert_symptoms([Symptom|Symptoms]):-
+    add_symptom(y, Symptom, _),
+    assert_symptoms(Symptoms).
+
+%% Check if the given symptoms match a disease exactly
+diagnose:-
+    forward,
+    bagof(Disease, has_disease(Disease), Diseases),
+    Diseases = [Disease|_],
+    is_true(Disease, HowExplanation),
+    write('You are suffering from '), write(Diseases),write(' because: '),nl, write_ln(HowExplanation),!;
+    ask_questions.
+
+%% Ask questions about more symptoms the user didn't mention
+ask_questions:-
+    disease(PlausibleDisease),
+    is_plausible(PlausibleDisease),
+    if PlausibleSymptoms then PlausibleDisease,
+    extract_symptom(PlausibleSymptoms, PlausibleSymptom),
+    not(not_has_disease_Inh(PlausibleDisease)),
+    write('Do you also suffer from '), write(PlausibleSymptom), write('? (y/n)'),nl,
+    read(Answer),
+    add_symptom(Answer, PlausibleSymptom, PlausibleDisease),
+    bagof(X, not_has_disease(X), [_|Bag]),
+    write('You dont suffer from: '), 
+    write_ln(Bag),
+    diagnose.
+
+
+%% This function returns a symptom the user might have based on 
+%% previously mentioned symptoms
+extract_symptom(S1 and S2, PlausibleSymptom):-
+    extract_symptom(S1, PlausibleSymptom);
+    extract_symptom(S2, PlausibleSymptom).
+extract_symptom(S1, PlausibleSymptom):-
+    not(has_symptom(S1)),
+    not(not_has_symptom_Inh(S1)),
+    not(S1 = _ and _),
+    PlausibleSymptom = S1.
+
+%% This function checks if a user has a symptom, and also considers symptoms
+%% of a lower hierarchy (if you said I suffer from fever, you might suffer from
+%% recurrent fever)
+has_symptom_Inh(Symptom, _):-
+    has_symptom(Symptom).
+
+has_symptom_Inh(Symptom, ParentSymptom):-
+    descends_from(Symptom, Sub_symptom),
+    has_symptom_Inh(Sub_symptom, ParentSymptom).
+
+%% Also check whether the inheritances are not present (if you said: I do not
+%% suffer from fever you do not want to be asked if you have recurrent fever)
+not_has_symptom_Inh(Symptom):-
+    not_has_symptom(Symptom);
+    descends_from(Symptom, ParentSymptom),
+    not_has_symptom_Inh(ParentSymptom).
+
+%% Also check whether the inheritances are not present (if you said: I do not
+%% suffer from malaria (implicit) you dont want to be asked if you have malaria tertiana)
+not_has_disease_Inh(Disease):-
+    not_has_disease(Disease);
+    descends_from(Disease, ParentDisease),
+    not_has_disease_Inh(ParentDisease).
+
+%% Adds a symptom and the corresponding disease to the list
+%% of diseases we now know the user doesn't have
+add_symptom(n, Symptom, Disease):-
+    assert(not_has_symptom(Symptom)),
+    assert(not_has_disease(Disease)).
+
+%% Adds the symptom to the list the user suffers from
+add_symptom(y, Symptom, _):-
+    assert(has_symptom(Symptom)),
+    descends_from(Symptom, ParentSymptom),
+    add_symptom(y, ParentSymptom, _),
+    write('Because you have '), write(Symptom),
+    write(', I now know you also have '), write(ParentSymptom),nl;
+    true.
 
