@@ -245,7 +245,8 @@ go:-
     display_options,
     take_input(y, Symptoms),
     assert_symptoms(Symptoms),
-    diagnose.
+    diagnose,!;
+    write_ln('It seems you are perfectly fine!').
 
 display_options:-
     bagof(Symptom, symptom(Symptom), Symptoms),
@@ -335,6 +336,6 @@ add_symptom(y, Symptom, _):-
     descends_from(Symptom, ParentSymptom),
     add_symptom(y, ParentSymptom, _),
     write('Because you have '), write(Symptom),
-    write(', I now know you also have '), write(ParentSymptom),nl;
+    write(', I know you also have '), write(ParentSymptom),nl;
     true.
 
