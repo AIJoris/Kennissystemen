@@ -7,6 +7,7 @@
 :- op(800, xfy, before).
 :- op(700, xfy, after).
 :- op(300, xfy, concurrent).
+:- op(200, xfy, or).
 
 go1:-
 	assert(event(a)),
