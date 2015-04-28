@@ -32,14 +32,34 @@ foo(A or B):-
 	foo(A);
 	foo(B).
 % Transitive before rule
-transitive_before(X, Y, Operator) :-
+transitive_before(X, Y) :-
 	 X before Y.
 
-transitive_before(X, Z, Operator) :- 
+transitive_before(X, Z) :- 
 	X before Y,
-	transitive_before(Y, Z, Operator),
+	transitive_before(Y, Z),
 	\+ X before Z,
 	assert(X before Z).
+
+% Transitive after rule
+transitive_after(X, Y) :-
+	 X after Y.
+
+transitive_after(X, Z) :- 
+	X after Y,
+	transitive_after(Y, Z),
+	\+ X after Z,
+	assert(X after Z).
+
+% Transitive concurrent rule
+transitive_(X, Y) :-
+	 X after Y.
+
+transitive_after(X, Z) :- 
+	X after Y,
+	transitive_after(Y, Z),
+	\+ X after Z,
+	assert(X after Z).
 
 
 
