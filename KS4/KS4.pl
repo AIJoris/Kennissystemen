@@ -8,7 +8,9 @@
 :- op(800, xfy, after).
 :- op(800, xfy, concurrent).
 :- op(200, xfy, or).
-
+:- dynamic before/2.
+:- dynamic after/2.
+:- dynamic concurrent/2. 
 
 %% The timeline in this case is a-b-c
 go1:-
@@ -28,40 +30,97 @@ go2:-
 	a after b,
 	c before a.
 
-foo(A or B):-
-	foo(A);
-	foo(B).
-% Transitive before rule
+% Explicitely add all transitive before relations to the knowledge base
 transitive_before(X, Y) :-
 	 X before Y.
-
 transitive_before(X, Z) :- 
 	X before Y,
 	transitive_before(Y, Z),
-	\+ X before Z,
-	assert(X before Z).
+	(\+ X before Z,
+	assert(X before Z));
+	true.
 
-% Transitive after rule
+% Explicitely add all transitive after relations to the knowledge base
 transitive_after(X, Y) :-
 	 X after Y.
-
 transitive_after(X, Z) :- 
 	X after Y,
 	transitive_after(Y, Z),
-	\+ X after Z,
-	assert(X after Z).
+	(\+ X after Z,
+	assert(X after Z));
+	true.
 
-% Transitive concurrent rule
-transitive_(X, Y) :-
-	 X after Y.
+% Explicitely add all transitive concurrent relations to the knowledge base
+transitive_concurrent(X, Y) :-
+	 X concurrent Y.
+transitive_concurrent(X, Z) :- 
+	X concurrent Y,
+	transitive_concurrent(Y, Z),
+	(\+ X concurrent Z,
+	assert(X concurrent Z));
+	true.
 
-transitive_after(X, Z) :- 
-	X after Y,
-	transitive_after(Y, Z),
-	\+ X after Z,
-	assert(X after Z).
+%% Explicitely add all transitive relations to the KB
+transitive:-
+	bagof(_, transitive_before(_,_), _),!,
+	bagof(_, transitive_after(_,_), _),!,
+	bagof(_, transitive_concurrent(_,_), _),!.
+
+earliest(X):-
+	X before _,
+	\+ _ before X.
+
+is_earlier(X,Y):-
+	X before Y.
+is_earlier(X,Z):-
+	X before Y,
+	is_earlier(Y,Z),!.
+
+generate_timeline([X|Timeline]):-
+	transitive,
+	earliest(X),
+	bagof(Y, is_earlier(X, Y), Temp),
+	reverse(Temp, [_|Temp1]),
+	reverse(Temp1, Timeline).
+
+timeline(Set):-
+	setof(X, generate_timeline(X), Set).
+
+%% Knowledge base
+event(a).
+event(b).
+event(c).
+
+d before e.
+b before c.
+c before d.
+a before b.
+f before d.
+
+
+b concurrent e.
 
 
 
 
 
+
+
+
+
+%% earliest(X):-
+%% 	X before _,
+%% 	\+ _ before X.
+
+%% is_earlier(X,Y):-
+%% 	X before Y.
+%% is_earlier(X,Z):-
+%% 	X before Y,
+%% 	is_earlier(Y,Z),!.
+
+%% timeline([X|Timeline]):-
+%% 	transitive,
+%% 	earliest(X),
+%% 	bagof(Y, is_earlier(X, Y), Temp),
+%% 	reverse(Temp, [_|Temp1]),
+%% 	reverse(Temp1, Timeline).
