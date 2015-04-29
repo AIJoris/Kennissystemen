@@ -90,7 +90,15 @@ generate_timeline([X|Timeline]):-
 
 check(A before B, [], [A,B]).
 check(A concurrent B, [], [[A,B]]).
-check(A before B, Timeline, Result):-
+check(A before B, [H|T], [H|Result]):-
+	member(B, Timeline),
+	append([BeforeB],[B|Btail],[H|T]),
+	add(BeforeB, B, Result).
+
+add([H|[]], B, [H,B]).
+add([H|T], B, [[B,H|T]|Result]):-
+	add(T,B,[H|Result]).
+
 	
 	
 
