@@ -83,8 +83,22 @@ generate_timeline([X|Timeline]):-
 	reverse(Temp, [_|Temp1]),
 	reverse(Temp1, Timeline).
 
-timeline(Set):-
-	setof(X, generate_timeline(X), Set).
+
+
+
+
+
+check(A before B, [], [A,B]).
+check(A concurrent B, [], [[A,B]]).
+check(A before B, Timeline, Result):-
+	
+	
+
+
+
+
+
+
 
 %% Knowledge base
 event(a).
