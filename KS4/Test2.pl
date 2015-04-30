@@ -128,13 +128,13 @@ add_next(A,C):-
 add_everything(Result, Result):-
 	reverse(Result, [H|T]),
 	(\+add_next(H,Next);
-	\+validate_timeline(ReversedTail, Next)).
+	\+validate_timeline(Result, Next)).
 
 add_everything(List, Result):-
 	reverse(List, [H|T]),
 	add_next(H, Next),
-	validate_timeline(ReversedTail, Next),
-	append(List, Next, NewList),
+	validate_timeline(List, Next),
+	append(List, [Next], NewList),
 	add_everything(NewList, Result).
 
 
