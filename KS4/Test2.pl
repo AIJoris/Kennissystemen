@@ -7,20 +7,156 @@
 :- dynamic after/2.
 :- dynamic concurrent/2. 
 
+%% Knowledge base
 d before e.
 b before c.
 c before d.
 a before b.
 f before d.
+f before g.
+
 event(a).
 event(b).
 event(c).
 event(d).
 event(e).
 event(f).
+event(g).
 
 
-% Explicitely add all transitive before relations to the knowledge base
+is_before(X before Y):- 
+	X before Y.
+is_before(X before Z):- 
+	Y before Z,
+	 is_before(X before Y).
+
+is_before(X before Y):-
+	 \+Y == X,
+	 \+is_before2(Y before X).
+
+is_before2(X before Y):-
+	 X before Y.
+is_before2(X before Y):-
+	 Z before Y,
+	  is_before2(X before Z).
+
+is_before3(X before Y):-
+	 X before Y.
+is_before3(X before Y):-
+	 Z before Y,
+	 is_before3(X before Z).
+
+earliest(X):-
+	X before _,
+	\+ _ before X.
+
+
+add_next(A,C):-
+	event(B),
+	setof(B, is_before(A before B), List),
+	member(C, List).
+
+
+af(Result):-
+	setof(X, earliest(X), Earliest),
+	member(Early, Earliest),
+	setof(X, add_everything([Early], X), Timelines),
+	setof(Y, event(Y), Events),
+	af1(Timelines, Events, Result).
+
+af1(Timelines, Events, Timeline):-
+	member(Timeline, Timelines),
+	af2(Timeline, Events).
+
+af2(_, []).
+af2(Timeline, [Event|Events]):-
+	member(Event, Timeline),
+	af2(Timeline, Events).
+
+
+add_everything(Result, Result):-
+	reverse(Result, [H|_]),
+	(\+add_next(H,_);
+	\+validate_timeline(Result, _)).
+
+add_everything(List, Result):-
+	reverse(List, [H|_]),
+	add_next(H, Next),
+	validate_timeline(List, Next),
+	append(List, [Next], NewList),
+	add_everything(NewList, Result).
+
+
+validate_timeline([H|TTimeline], Next):-
+	is_before(H before Next),
+	validate_timeline(TTimeline, Next),!.
+
+validate_timeline([], _).
+
+	
+point(X):-
+	write('Input please'),
+	read(Input),
+	assert(Z),
+	write('More input or quit (q)'),
+	read(Y),
+	(Y == q, af(X)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+make_timeline(X):-
+	setof(X, earliest(X), List),
+	member(Start, List),
+	add_everything([Start], Result),
+	write(Z, Result).
+
+	% Explicitely add all transitive before relations to the knowledge base
 transitive_before(X, Y) :-
 	 X before Y.
 transitive_before(X, Z) :- 
@@ -86,69 +222,3 @@ check(Y before Z, [Y before Z]) :-
 check(Y before Z, [Y before Z|Result]) :- 
 	Y before Z,
 	check(_ before Y,Result).
-
-is_before(X before Y):- 
-	X before Y.
-is_before(X before Z):- 
-	Y before Z,
-	 is_before(X before Y).
-
-is_before(X before Y):-
-	 \+Y == X,
-	 \+is_before2(Y before X).
-
-is_before2(X before Y):-
-	 X before Y.
-is_before2(X before Y):-
-	 Z before Y,
-	  is_before2(X before Z).
-
-is_before3(X before Y):-
-	 X before Y.
-is_before3(X before Y):-
-	 Z before Y,
-	 is_before3(X before Z).
-
-earliest(X):-
-	X before _,
-	\+ _ before X.
-
-make_timeline(X):-
-	setof(X, earliest(X), List),
-	member(Start, List),
-	add_everything([Start], Result),
-	write(Z, Result).
-
-add_next(A,C):-
-	event(B),
-	setof(B, is_before(A before B), List),
-	member(C, List).
-
-
-add_everything(Result, Result):-
-	reverse(Result, [H|T]),
-	(\+add_next(H,Next);
-	\+validate_timeline(Result, Next)).
-
-add_everything(List, Result):-
-	reverse(List, [H|T]),
-	add_next(H, Next),
-	validate_timeline(List, Next),
-	append(List, [Next], NewList),
-	add_everything(NewList, Result).
-
-
-%% add_everything(A, [A]):-
-%% 	\+add_next(A, _).
-
-%% add_everything(A, [A|Result]):-
-%% 	add_next(A, B),
-%% 	add_everything(B,Result).
-
-validate_timeline([H|TTimeline], Next):-
-	is_before(H before Next),
-	validate_timeline(TTimeline, Next),!.
-
-validate_timeline([], _).
-
-	
